@@ -79,6 +79,7 @@ case class MyTopLevel() extends Component {
         wb.io.rf_wnum <> rf.io.rf_wnum
         wb.io.rf_wdata <> rf.io.rf_wdata
         wb.io.toDEC <> decode.io.fromWB
+        wb.io.updateBPU <> pc.io.updateBPU
 
         io.debug_wb_pc <> wb.io.debug.pc
         io.debug_wb_rf_wen <> wb.io.debug.wen
@@ -91,7 +92,7 @@ case class MyTopLevel() extends Component {
 
 object MyTopLevelVerilog extends App {
     Config.spinal.generateVerilog(MyTopLevel())
-    // Config.spinal.generateVerilog(ALU())
+    // Config.spinal.generateVerilog(PC())
 }
 
 object MyTopLevelVhdl extends App {

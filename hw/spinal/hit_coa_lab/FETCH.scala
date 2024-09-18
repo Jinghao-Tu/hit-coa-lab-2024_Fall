@@ -15,16 +15,20 @@ case class FETCH() extends Component {
 
         val fromPC = slave Stream (new Bundle {
             val pc = UInt(32 bits)
+            val bpuBundle = BPUBundle()
         })
 
         val toDecode = master Stream (new Bundle {
             val pc = UInt(32 bits)
             val inst = Bits(32 bits)
+            val bpuBundle = BPUBundle()
         })
     }
 
+
     val pc = io.fromPC.pc
     val pc_reg = Reg(UInt(32 bits)) init (0)
+    val bpuBundle_reg = Reg(BPUBundle()) init (BPUBundle().rst())
 
     val reader = new StateMachine {
         val request = new State with EntryPoint
@@ -35,8 +39,9 @@ case class FETCH() extends Component {
         
         io.fromPC.ready := False
         io.toDecode.valid := False
-        io.toDecode.payload.pc := 0
-        io.toDecode.payload.inst := 0
+        io.toDecode.payload.pc := pc_reg
+        io.toDecode.payload.inst := io.inst_sram_rdata
+        io.toDecode.payload.bpuBundle := bpuBundle_reg
 
         request
             .whenIsActive {
@@ -47,6 +52,7 @@ case class FETCH() extends Component {
                     io.inst_sram_en := True
                     io.inst_sram_addr := pc
                     pc_reg := pc
+                    bpuBundle_reg := io.fromPC.bpuBundle
                     goto(accept)
                 }
             }
@@ -60,8 +66,6 @@ case class FETCH() extends Component {
                     goto(request)
                 }.elsewhen(io.toDecode.ready) {
                     io.inst_sram_en := False
-                    io.toDecode.payload.pc := pc_reg
-                    io.toDecode.payload.inst := io.inst_sram_rdata
                     goto(request)
                 }.otherwise {
                     io.inst_sram_en := True

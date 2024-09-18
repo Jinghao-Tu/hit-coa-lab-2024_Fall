@@ -14,10 +14,10 @@ case class WB() extends Component {
             val wnum = UInt(5 bits)
             val wben = Bool()
             
-            val target = UInt(32 bits)
-            val jump = Bool()
-            val jump_inst = Bool()
+            val updateBPU = updateBPUBundle()
         })
+        
+        val updateBPU = master Stream(updateBPUBundle())
         
         val rf_wen = out Bool()
         val rf_wnum = out UInt(5 bits)
@@ -42,9 +42,7 @@ case class WB() extends Component {
     val wdata = Reg(Bits(32 bits)) init (0) 
     val wnum = Reg(UInt(5 bits)) init (0)
     val wben = Reg(Bool) init (False)
-    val target = Reg(UInt(32 bits)) init (0)
-    val jump = Reg(Bool) init (False)
-    val jump_inst = Reg(Bool) init (False)
+    val updateBPU = Reg(updateBPUBundle()) init (updateBPUBundle().rst())
     val valid = Reg(Bool) init (False)
 
     when (io.fromALU.valid && io.fromALU.ready) {
@@ -52,9 +50,7 @@ case class WB() extends Component {
         wdata := io.fromALU.payload.wdata
         wnum := io.fromALU.payload.wnum
         wben := io.fromALU.payload.wben
-        target := io.fromALU.payload.target
-        jump := io.fromALU.payload.jump
-        jump_inst := io.fromALU.payload.jump_inst
+        updateBPU := io.fromALU.payload.updateBPU
         valid := True
     }.otherwise {
         valid := False
@@ -70,8 +66,11 @@ case class WB() extends Component {
     io.rf_wnum := wnum
     io.rf_wdata := wdata
     
-    io.flush := valid && jump
-    io.redirectPC := target
+    io.flush := valid && updateBPU.predict_fail
+    io.redirectPC := updateBPU.jump ? updateBPU.target | (pc + 4)
+    
+    io.updateBPU.valid := valid
+    io.updateBPU.payload := updateBPU
     
     io.debug.pc := pc
     io.debug.wdata := wdata

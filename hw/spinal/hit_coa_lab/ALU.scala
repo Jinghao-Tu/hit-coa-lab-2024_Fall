@@ -24,6 +24,8 @@ case class ALU() extends Component {
             val src4 = Bits(32 bits)
             val wnum = UInt(5 bits)
             val wben = Bool()
+            
+            val bpuBundle = BPUBundle()
         })
 
         val toWB = master Stream (new Bundle {
@@ -31,10 +33,8 @@ case class ALU() extends Component {
             val wdata = Bits(32 bits)
             val wnum = UInt(5 bits)
             val wben = Bool()
-
-            val target = UInt(32 bits)
-            val jump = Bool()
-            val jump_inst = Bool()
+            
+            val updateBPU = updateBPUBundle()
         })
         
         val toDEC = out(new Bundle {
@@ -53,6 +53,7 @@ case class ALU() extends Component {
     val src3 = Reg(Bits(32 bits)) init (0)
     val src4 = Reg(Bits(32 bits)) init (0)
     val wnum = Reg(UInt(5 bits)) init (0)
+    val bpuBundle = Reg(BPUBundle()) init (BPUBundle().rst())
     val wben = Reg(Bool) init (False)
     val valid = Reg(Bool) init (False)
 
@@ -67,6 +68,7 @@ case class ALU() extends Component {
         src4 := io.decoded.payload.src4
         wnum := io.decoded.payload.wnum
         wben := io.decoded.payload.wben
+        bpuBundle := io.decoded.payload.bpuBundle
         valid := True
     }.elsewhen(io.toWB.valid && io.toWB.ready) {
         valid := False
@@ -104,6 +106,7 @@ case class ALU() extends Component {
             jump_inst := True
         }
     }
+    val predict_fail = (jump ^ bpuBundle.predict_jump) || (jump && bpuBundle.predict_jump && target =/= bpuBundle.predict_target)
 
     // LSU
     val LSU_complete = True
@@ -207,9 +210,7 @@ case class ALU() extends Component {
     io.toWB.payload.wdata := wdata
     io.toWB.payload.wnum := wnum
     io.toWB.payload.wben := wben
-    io.toWB.payload.target := target
-    io.toWB.payload.jump := jump
-    io.toWB.payload.jump_inst := jump_inst
+    io.toWB.payload.updateBPU := updateBPUBundle().set(pc, predict_fail, target, jump, jump_inst, bpuBundle.ghr)
     
     io.toDEC.running := valid
     io.toDEC.complete := io.toWB.valid

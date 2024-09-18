@@ -14,11 +14,14 @@ case class REGFILE() extends Component {
         val rf_rdata2 = out Bits(32 bits)
     }
 
-    val rf = Mem(Bits(32 bits), 32)
+    // val rf = Mem(Bits(32 bits), 32)
+    val rf = Vec.fill(32)(Reg(Bits(32 bits)) init(0))
     when(io.rf_wen) {
         rf(io.rf_wnum) := io.rf_wdata
     }
 
-    io.rf_rdata1 := (io.rf_raddr1 === 0) ? B(0) | rf.readAsync(io.rf_raddr1)
-    io.rf_rdata2 := (io.rf_raddr2 === 0) ? B(0) | rf.readAsync(io.rf_raddr2)
+    // io.rf_rdata1 := (io.rf_raddr1 === 0) ? B(0) | rf.readAsync(io.rf_raddr1)
+    // io.rf_rdata2 := (io.rf_raddr2 === 0) ? B(0) | rf.readAsync(io.rf_raddr2)
+    io.rf_rdata1 := (io.rf_raddr1 === 0) ? B(0) | rf(io.rf_raddr1)
+    io.rf_rdata2 := (io.rf_raddr2 === 0) ? B(0) | rf(io.rf_raddr2)
 }

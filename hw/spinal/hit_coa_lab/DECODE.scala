@@ -10,6 +10,7 @@ case class DECODE() extends Component {
         val fromFetch = slave Stream (new Bundle {
             val pc = UInt(32 bits)
             val inst = Bits(32 bits)
+            val bpuBundle = BPUBundle()
         })
 
         val decoded = master Stream (new Bundle {
@@ -21,6 +22,7 @@ case class DECODE() extends Component {
             val src4 = Bits(32 bits)
             val wnum = UInt(5 bits)
             val wben = Bool()
+            val bpuBundle = BPUBundle()
         })
 
         val fromALU = in(new Bundle {
@@ -47,11 +49,13 @@ case class DECODE() extends Component {
     val pc = Reg(UInt(32 bits)) init (0)
     val inst = Reg(Bits(32 bits)) init (0)
     val valid = Reg(Bool) init (False)
+    val bpuBundle = Reg(BPUBundle()) init (BPUBundle().rst())
     when(io.flush) {
         valid := False
     }.elsewhen(io.fromFetch.valid && io.fromFetch.ready) {
         pc := io.fromFetch.payload.pc
         inst := io.fromFetch.payload.inst
+        bpuBundle := io.fromFetch.payload.bpuBundle
         valid := True
     }.elsewhen(io.decoded.valid && io.decoded.ready) {
         valid := False
@@ -184,5 +188,7 @@ case class DECODE() extends Component {
     io.decoded.payload.src4 := src4
     io.decoded.payload.wnum := wnum
     io.decoded.payload.wben := wben
+    
+    io.decoded.payload.bpuBundle := bpuBundle
 
 }
